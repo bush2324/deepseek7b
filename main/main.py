@@ -5,6 +5,24 @@ import uvicorn
 # 初始化 FastAPI 應用
 app = FastAPI()
 
+ordering = """
+你是我的餐廳採購助手，我每天點菜的品項大致相同，但數量會變化。你的任務是：
+
+記錄我今天提供的品項與數量，整理成清單。
+
+單位統一使用「斤、兩」，小於 1 兩的部分記為 0。
+
+與昨天的清單對比，確保品項一致，並提醒我確認。
+
+項目清單：
+彩椒
+蒜碎
+美生菜
+番茄
+九層塔
+洋菇
+"""
+
 # 呼叫 Deepseek 進行聊天的函數
 def chat_with_deepseek(message: str):
     result = subprocess.run([r'C:\Users\bushc\AppData\Local\Programs\Ollama\ollama.exe', 'run', 'deepseek-r1'], 
@@ -12,7 +30,12 @@ def chat_with_deepseek(message: str):
     return result.stdout
 
 # 定義一個路由來處理 AI 聊天請求
-@app.get("/chat")
+@app.get("/chat/點菜")
+async def chat_with_ai(user_message: str):
+    response = chat_with_deepseek(ordering +user_message)
+    return {"user_message": user_message, "ai_response": response}
+
+@app.get("/chat/測試")
 async def chat_with_ai(user_message: str):
     response = chat_with_deepseek(user_message)
     return {"user_message": user_message, "ai_response": response}
