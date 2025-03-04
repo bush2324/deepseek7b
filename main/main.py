@@ -4,6 +4,8 @@ import uvicorn
 from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
 from langchain_community.chat_models import ChatOllama
+import json
+import os
 
 # 初始化 FastAPI 應用
 app = FastAPI()
@@ -12,15 +14,30 @@ app = FastAPI()
 ollama_path = r'C:\Users\bushc\AppData\Local\Programs\Ollama\ollama.exe'
 llm = ChatOllama(model="deepseek-r1", temperature=0.7, ollama_path=ollama_path)
 
+# 測試資料儲存檔案
+DATA_FILE = "sup_data.json"
+
+# 初始化測試資料
+if not os.path.exists(DATA_FILE):
+    test_data = [
+        {"question": "旗津哪裡可以租立槳?", "answer": "可以在旗津SUP俱樂部租借，地址是旗津海灘旁。"},
+        {"question": "立槳價格是多少?", "answer": "旗津SUP租借價格約每小時500元。"},
+        {"question": "旗津水域潮汐資訊怎麼查?", "answer": "可以透過中央氣象局或旗津SUP俱樂部的網站查詢最新潮汐資訊。"}
+    ]
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(test_data, f, ensure_ascii=False, indent=4)
+
 # Prompt 模板
 template = """
-你是我的餐廳採購助手，我每天點菜的品項大致相同，但數量會變化。你的任務是：
+你是一位旗津SUP立槳的知識機器人，專門回答關於立槳活動、租借資訊、教學流程、以及旗津水域相關的知識。
 
-記錄我今天提供的品項與數量，整理成清單。
+你的任務是：
 
-單位統一使用「斤、兩」，小於 1 兩的部分記為 0。
-
-與昨天的清單對比，確保品項一致，並提醒我確認。
+1. 解答旗津SUP立槳相關問題。
+2. 提供租借流程、價格與安全須知。
+3. 說明立槳教學內容。
+4. 提供旗津水域天氣、潮汐或安全資訊。
+5. 能記住前後對話內容，讓使用者可以連續問答。
 
 問題: {question}
 請用簡單且清晰的語言回答。
@@ -34,22 +51,33 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        knowledge_base = json.load(f)
+
+    # 嘗試比對資料
+    for item in knowledge_base:
+        if item["question"] in request.question:
+            return {"user_input": request.question, "ai_response": item["answer"]}
+
+    # 如果沒找到，則用LLM生成答案
     result = chain.run(request.question)
     return {"user_input": request.question, "ai_response": result}
+
+@app.post("/add_data")
+async def add_data(data: dict):
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        knowledge_base = json.load(f)
+    
+    knowledge_base.append(data)
+
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(knowledge_base, f, ensure_ascii=False, indent=4)
+    
+    return {"message": "資料已新增", "data": data}
 
 @app.get("/")
 async def read_root():
     return {"message": "~內網測試成功"}
-
-responses = {
-    "葉家豪": "超雄聖體",
-    "溫維智": "旗津第一長髮男"
-}
-
-@app.get("/api/測試")
-async def test_api(name: str):
-    response = responses.get(name, "未知的人物")
-    return {"input": name, "output": response}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=1234, reload=True)
