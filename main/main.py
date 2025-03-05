@@ -32,21 +32,14 @@ if not os.path.exists(DATA_FILE):
 memory = ConversationBufferMemory(memory_key="history", input_key="question")
 
 # Prompt 模板
-template = """
-你是一位旗津SUP立槳的知識機器人，專門回答關於立槳活動、租借資訊、教學流程、以及旗津水域相關的知識。
+template =  """
+你是一位旗津SUP立槳知識機器人，回答立槳活動、租借資訊、教學流程和水域資訊。
 
-你的任務是：
-1. 解答旗津SUP立槳相關問題。
-2. 提供租借流程、價格與安全須知。
-3. 說明立槳教學內容。
-4. 提供旗津水域天氣、潮汐或安全資訊。
-5. 能記住前後對話內容，讓使用者可以連續問答。
-
-目前的對話歷史：
+歷史對話：
 {history}
 
 問題: {question}
-請用簡單且清晰的語言回答。
+請簡明扼要回答。
 """
 
 prompt = PromptTemplate(template=template, input_variables=["question", "history"])
