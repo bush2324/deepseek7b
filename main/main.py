@@ -123,13 +123,24 @@ def format_hotel_response(hotel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    # **檢查是否是記憶查詢**
+    if any(kw in request.question for kw in ["剛剛問", "剛剛說"]):
+        history = memory.load_memory_variables({})
+        if history and "history" in history and history["history"]:
+            return {"user_input": request.question, "ai_response": history["history"]}
+        return {"user_input": request.question, "ai_response": "抱歉，我沒有記住最近的對話！"}
+
     csv_answer = match_csv_data(request.question)
     if csv_answer:
         memory.save_context({"question": request.question}, {"answer": str(csv_answer)})
         return {"user_input": request.question, "ai_response": str(csv_answer)}
     
     result = chain.run({"question": request.question})
+    
+    memory.save_context({"question": request.question}, {"answer": result})
+    
     return {"user_input": request.question, "ai_response": result}
+
 
 @app.post("/add_data")
 async def add_data(request: AddDataRequest):
